@@ -143,7 +143,7 @@ async def generic_error_handler(request: Request, exc: Exception):
 
 
 # ---------------------------------------------------------------------------
-# Routers — add back as each router file is created
+# Routers — uncomment as each router file is placed in app/routers/
 # ---------------------------------------------------------------------------
 # app.include_router(auth.router,      prefix="/auth",      tags=["Auth"])
 # app.include_router(users.router,     prefix="/users",     tags=["Users"])
@@ -154,7 +154,7 @@ async def generic_error_handler(request: Request, exc: Exception):
 
 
 # ---------------------------------------------------------------------------
-# Health-check — also pings both databases
+# Health-check — pings both databases
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["Health"], summary="Server + DB health check")
 async def health():
