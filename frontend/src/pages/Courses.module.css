@@ -1,0 +1,36 @@
+.page { padding: 32px 28px; max-width: 1200px; margin: 0 auto; }
+
+.statsRow {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); margin-bottom: 28px;
+}
+
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+}
+
+.card {
+  position: relative; background: var(--bg2);
+  padding: 24px 22px 16px; cursor: pointer;
+  transition: background 0.14s; overflow: hidden;
+  display: flex; flex-direction: column; gap: 0;
+}
+.card:hover { background: var(--bg3); }
+.card:hover .cardAccent { background: var(--accent); }
+
+.cardAccent {
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--border2); transition: background 0.14s;
+}
+
+.code { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.name { font-family: var(--serif); font-size: 18px; color: var(--text); margin-bottom: 14px; line-height: 1.3; }
+.meta { display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--text3); margin-bottom: 14px; }
+.meta span { display: flex; align-items: center; gap: 5px; }
+.meta i { font-size: 13px; }
+.pendingRow { margin-bottom: 14px; }
+
+.cardFooter { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--text4); margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); }
+.card:hover .cardFooter { color: var(--accent); }
