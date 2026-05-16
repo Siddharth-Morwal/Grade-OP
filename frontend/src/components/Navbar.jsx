@@ -3,12 +3,12 @@ import styles from './Navbar.module.css';
 
 const INSTRUCTOR_TABS = [
   { id: 'courses', icon: 'layout-grid', label: 'Courses' },
-  { id: 'upload',  icon: 'upload',      label: 'Upload' },
+  { id: 'review',  icon: 'checkup-list',  label: 'Review Queue' },
   { id: 'results', icon: 'chart-bar',   label: 'Results' },
 ];
 const TA_TABS = [
   { id: 'courses', icon: 'layout-grid',   label: 'Courses' },
-  { id: 'review',  icon: 'checkup-list',  label: 'Review Queue' },
+  { id: 'upload',  icon: 'upload',      label: 'Upload' },
   { id: 'results', icon: 'chart-bar',     label: 'Results' },
 ];
 

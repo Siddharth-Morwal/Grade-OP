@@ -33,7 +33,7 @@ export default function Login() {
           >
             <i className="ti ti-school" />
             <span className={styles.roleName}>Instructor</span>
-            <span className={styles.roleDesc}>Upload exams · View results</span>
+            <span className={styles.roleDesc}>Review · Approve · Override</span>
           </button>
           <button
             className={`${styles.roleBtn} ${role === 'ta' ? styles.roleBtnActive : ''}`}
@@ -41,7 +41,7 @@ export default function Login() {
           >
             <i className="ti ti-user-check" />
             <span className={styles.roleName}>Teaching Assistant</span>
-            <span className={styles.roleDesc}>Review · Approve · Override</span>
+            <span className={styles.roleDesc}>Upload exams · View results</span>
           </button>
         </div>
 
