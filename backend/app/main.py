@@ -23,7 +23,7 @@ from app.database.mongo import connect_mongo, close_mongo
 
 # ── Routers (uncomment each one as you build it) ──────────────────────────────
 from app.routers import auth
-# from app.routers import exams, questions, grades, reviews, users
+from app.routers import exams, questions, grades, reviews, users
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -147,11 +147,11 @@ async def generic_error_handler(request: Request, exc: Exception):
 # Routers — uncomment as each router file is placed in app/routers/
 # ---------------------------------------------------------------------------
 app.include_router(auth.router,      prefix="/auth",      tags=["Auth"])
-# app.include_router(users.router,     prefix="/users",     tags=["Users"])
-# app.include_router(exams.router,     prefix="/exams",     tags=["Exams"])
-# app.include_router(questions.router, prefix="/questions", tags=["Questions"])
-# app.include_router(grades.router,    prefix="/grades",    tags=["AI Grades"])
-# app.include_router(reviews.router,   prefix="/reviews",   tags=["TA Reviews"])
+app.include_router(users.router,     prefix="/users",     tags=["Users"])
+app.include_router(exams.router,     prefix="/exams",     tags=["Exams"])
+app.include_router(questions.router, prefix="/questions", tags=["Questions"])
+app.include_router(grades.router,    prefix="/grades",    tags=["AI Grades"])
+app.include_router(reviews.router,   prefix="/reviews",   tags=["TA Reviews"])
 
 
 # ---------------------------------------------------------------------------
