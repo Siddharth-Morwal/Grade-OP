@@ -107,6 +107,13 @@ class User(UUIDMixin, TimestampMixin, Base):
         comment="Display name shown in the UI",
     )
 
+    roll_number: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+        comment="Student roll number (e.g. CS21B043)",
+    )
+
     # ---- Authentication ----
     # CONCEPT: Never expose this column
     # ----------------------------------

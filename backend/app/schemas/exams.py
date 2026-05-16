@@ -13,6 +13,8 @@ class ExamOut(BaseModel):
     description: Optional[str] = None
     total_marks: int
     file_name: str
+    answer_key_path: Optional[str] = None
+    student_script_path: Optional[str] = None
     status: ExamStatus
     created_by: uuid.UUID
     created_at: datetime

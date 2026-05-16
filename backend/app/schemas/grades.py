@@ -7,6 +7,7 @@ from app.models.grade import ReviewStatus
 
 class QuestionScore(BaseModel):
     question_id: str
+    topic: Optional[str] = None
     score: int
     max_score: int
     feedback: Optional[str] = None
@@ -20,17 +21,21 @@ class GradeCreate(BaseModel):
     confidence_score: float
     flagged_for_review: bool = False
     ml_model_version: Optional[str] = None
+    overall_justification: Optional[str] = None
     per_question_breakdown: Optional[List[QuestionScore]] = None
 
 class GradeOut(BaseModel):
     id: uuid.UUID
     student_id: uuid.UUID
+    student_name: Optional[str] = None
+    student_roll: Optional[str] = None
     exam_id: uuid.UUID
     
     score: int
     max_score: int
     confidence_score: float
     ml_model_version: Optional[str] = None
+    overall_justification: Optional[str] = None
     per_question_breakdown: Optional[List[QuestionScore]] = None
     
     flagged_for_review: bool

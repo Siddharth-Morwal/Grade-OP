@@ -110,6 +110,18 @@ class Exam(UUIDMixin, TimestampMixin, Base):
         comment="Original filename as uploaded by the teacher",
     )
 
+    answer_key_path: Mapped[str | None] = mapped_column(
+        String(1000),
+        nullable=True,
+        comment="Path to the uploaded answer key/rubric",
+    )
+
+    student_script_path: Mapped[str | None] = mapped_column(
+        String(1000),
+        nullable=True,
+        comment="Path to the bulk student answers PDF",
+    )
+
     # ---- Lifecycle status ----
     status: Mapped[ExamStatus] = mapped_column(
         SAEnum(ExamStatus, name="examstatus", native_enum=True),

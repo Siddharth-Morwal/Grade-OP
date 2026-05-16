@@ -163,6 +163,12 @@ class Grade(UUIDMixin, TimestampMixin, Base):
         comment="Version string of the ML model that produced this grade (e.g. 'v2.1.0')",
     )
 
+    overall_justification: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Overall justification provided by the ML model",
+    )
+
     # ---- Human review workflow ----
     # CONCEPT: Denormalized review state
     # ------------------------------------
@@ -263,6 +269,16 @@ class Grade(UUIDMixin, TimestampMixin, Base):
         if self.max_score == 0:
             return 0.0
         return round((self.score / self.max_score) * 100, 2)
+
+    @property
+    def student_name(self) -> str | None:
+        """Helper for API responses to include the student's name."""
+        return self.student.full_name if self.student else None
+
+    @property
+    def student_roll(self) -> str | None:
+        """Helper for API responses to include the student's roll number."""
+        return self.student.roll_number if self.student else None
 
     @property
     def is_reviewed(self) -> bool:

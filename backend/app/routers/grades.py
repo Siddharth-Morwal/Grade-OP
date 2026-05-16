@@ -4,6 +4,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
+from sqlalchemy.orm import selectinload
 
 from app.database.postgres import get_db
 from app.auth.dependencies import get_current_user, require_roles
@@ -48,6 +49,7 @@ async def submit_grade(
         existing_grade.confidence_score = payload.confidence_score
         existing_grade.flagged_for_review = payload.flagged_for_review
         existing_grade.ml_model_version = payload.ml_model_version
+        existing_grade.overall_justification = payload.overall_justification
         db.add(existing_grade)
         await db.commit()
         await db.refresh(existing_grade)
@@ -72,7 +74,7 @@ async def list_grades(
     """List grades."""
     from app.models.grade import Grade
 
-    query = select(Grade)
+    query = select(Grade).options(selectinload(Grade.student))
 
     if current_user.role == "student":
         query = query.where(Grade.student_id == current_user.id)
@@ -100,7 +102,11 @@ async def get_grade(
     """Fetch a specific grade by ID."""
     from app.models.grade import Grade
 
-    result = await db.execute(select(Grade).where(Grade.id == uuid.UUID(grade_id)))
+    result = await db.execute(
+        select(Grade)
+        .options(selectinload(Grade.student))
+        .where(Grade.id == uuid.UUID(grade_id))
+    )
     grade = result.scalar_one_or_none()
 
     if not grade:

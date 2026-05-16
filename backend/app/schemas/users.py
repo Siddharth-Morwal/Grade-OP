@@ -10,6 +10,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+    roll_number: Optional[str] = None
     role: UserRole = UserRole.student
 
 # What a user sends when updating their profile
@@ -23,6 +24,7 @@ class UserOut(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
+    roll_number: Optional[str] = None
     role: UserRole
     is_active: bool
     avatar_url: Optional[str] = None
