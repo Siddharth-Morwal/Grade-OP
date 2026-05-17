@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useApp } from '../hooks/useApp';
-import { COURSES } from '../data/mockData';
+import api from '../api/client';
 import { SectionHeader, StatCard, Pill, Btn } from '../components/UI';
 import styles from './Results.module.css';
 
@@ -16,21 +17,36 @@ function scoreFill(pct) {
 }
 
 export default function Results({ course, onNav, onOpenReview }) {
-  const { submissions, showToast } = useApp();
-  const c = course || COURSES[0];
-  const avg = Math.round(submissions.reduce((a, s) => a + s.pct, 0) / submissions.length);
-  const passing = submissions.filter(s => s.pct >= 50).length;
-  const highest = Math.max(...submissions.map(s => s.pct));
-  const pending = submissions.filter(s => s.status === 'pending').length;
+  const { submissions, setSubmissions, showToast } = useApp();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch reviews for the selected exam (course)
+    const url = course ? `/reviews?exam_id=${course.id}` : '/reviews';
+    api.get(url)
+      .then(res => {
+        setSubmissions(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch reviews:', err);
+        setLoading(false);
+      });
+  }, [course, setSubmissions]);
+
+  const avg = submissions.length > 0 ? Math.round(submissions.reduce((a, s) => a + (s.score / s.max_score * 100), 0) / submissions.length) : 0;
+  const passing = submissions.filter(s => (s.score / s.max_score) >= 0.5).length;
+  const highest = submissions.length > 0 ? Math.max(...submissions.map(s => Math.round((s.score / s.max_score) * 100))) : 0;
+  const pending = submissions.filter(s => s.review_status === 'pending').length;
 
   return (
     <div className={styles.page}>
       {course && (
         <button className={styles.back} onClick={() => onNav('courses')}>
-          <i className="ti ti-arrow-left" /> Back to Courses
+          <i className="ti ti-arrow-left" /> Back to Exams
         </button>
       )}
-      <SectionHeader title={c.name} sub={`${c.code} · ${submissions.length} submissions`}>
+      <SectionHeader title={course ? course.title : "All Reviews"} sub={`${course ? course.subject : ''} · ${submissions.length} submissions`}>
         <Btn variant="outline" icon="download" onClick={() => showToast('CSV export ready', 'success')}>Export CSV</Btn>
         <Btn variant="outline" icon="printer" onClick={() => showToast('Print view prepared', 'info')}>Print</Btn>
       </SectionHeader>
@@ -44,6 +60,7 @@ export default function Results({ course, onNav, onOpenReview }) {
       </div>
 
       <div className={styles.tableWrap}>
+        {loading ? <p style={{padding: '2rem'}}>Loading submissions...</p> : (
         <table className={styles.table}>
           <thead>
             <tr>
@@ -57,38 +74,41 @@ export default function Results({ course, onNav, onOpenReview }) {
             </tr>
           </thead>
           <tbody>
-            {submissions.sort((a,b) => b.pct - a.pct).map(s => (
+            {submissions.map(s => {
+              const pct = Math.round((s.score / s.max_score) * 100);
+              return (
               <tr key={s.id} onClick={() => onOpenReview(s.id)}>
-                <td className={styles.tdName}>{s.name}</td>
-                <td className={styles.tdMono}>{s.roll}</td>
+                <td className={styles.tdName}>{s.student_name || 'Anonymous'}</td>
+                <td className={styles.tdMono}>{s.student_roll || s.student_id.substring(0,8)}</td>
                 <td>
-                  <span className={`${styles.score} ${styles['score_' + scoreColor(s.pct)]}`}>
-                    {s.score}/{s.max}
+                  <span className={`${styles.score} ${styles['score_' + scoreColor(pct)]}`}>
+                    {s.score}/{s.max_score}
                   </span>
                 </td>
                 <td>
                   <div className={styles.pctCell}>
-                    <span className={styles.pctNum} style={{ color: scoreFill(s.pct) }}>{s.pct}%</span>
+                    <span className={styles.pctNum} style={{ color: scoreFill(pct) }}>{pct}%</span>
                     <div className={styles.bar}>
-                      <div className={styles.barFill} style={{ width: `${s.pct}%`, background: scoreFill(s.pct) }} />
+                      <div className={styles.barFill} style={{ width: `${pct}%`, background: scoreFill(pct) }} />
                     </div>
                   </div>
                 </td>
                 <td>
-                  {s.status === 'approved' && <Pill variant="green"><i className="ti ti-check" />Approved</Pill>}
-                  {s.status === 'overridden' && <Pill variant="red"><i className="ti ti-edit" />Overridden</Pill>}
-                  {s.status === 'pending' && <Pill variant="amber"><i className="ti ti-clock" />Pending</Pill>}
+                  {s.review_status === 'approved' && <Pill variant="green"><i className="ti ti-check" />Approved</Pill>}
+                  {s.review_status === 'overridden' && <Pill variant="red"><i className="ti ti-edit" />Overridden</Pill>}
+                  {s.review_status === 'pending' && <Pill variant="amber"><i className="ti ti-clock" />Pending</Pill>}
                 </td>
                 <td>
-                  {s.plagiarism && <Pill variant="amber"><i className="ti ti-alert-triangle" />Plagiarism</Pill>}
+                  {s.flagged_for_review && <Pill variant="amber"><i className="ti ti-alert-triangle" />Flagged</Pill>}
                 </td>
                 <td className={styles.tdAction}>
                   <i className="ti ti-chevron-right" />
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
+        )}
       </div>
     </div>
   );

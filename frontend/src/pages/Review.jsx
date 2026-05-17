@@ -20,19 +20,19 @@ export default function Review({ initialId }) {
   const [overrideReason, setOverrideReason] = useState('');
 
   const selected = submissions[selectedIdx];
-  const pending = submissions.filter(s => s.status === 'pending').length;
-  const approved = submissions.filter(s => s.status === 'approved').length;
-  const overridden = submissions.filter(s => s.status === 'overridden').length;
+  const pending = submissions.filter(s => s.review_status === 'pending').length;
+  const approved = submissions.filter(s => s.review_status === 'approved').length;
+  const overridden = submissions.filter(s => s.review_status === 'overridden').length;
 
   const doApprove = useCallback(() => {
-    if (!selected || selected.status !== 'pending') return;
+    if (!selected || selected.review_status !== 'pending') return;
     approveSubmission(selected.id);
     if (selectedIdx < submissions.length - 1) setSelectedIdx(i => i + 1);
     setOverrideOpen(false);
   }, [selected, selectedIdx, submissions.length, approveSubmission]);
 
   const doOverride = useCallback(() => {
-    if (!selected || selected.status !== 'pending') return;
+    if (!selected || selected.review_status !== 'pending') return;
     setOverrideOpen(o => !o);
     setOverrideScore(String(selected.score));
     setOverrideReason('');
@@ -40,7 +40,7 @@ export default function Review({ initialId }) {
 
   function confirmOverride() {
     const score = parseInt(overrideScore);
-    if (isNaN(score) || score < 0 || score > selected.max) return;
+    if (isNaN(score) || score < 0 || score > selected.max_score) return;
     overrideSubmission(selected.id, score, overrideReason);
     setOverrideOpen(false);
     if (selectedIdx < submissions.length - 1) setSelectedIdx(i => i + 1);
@@ -68,56 +68,60 @@ export default function Review({ initialId }) {
         <StatCard label="Pending"       value={pending}   color="amber" />
         <StatCard label="Approved"      value={approved}  color="green" />
         <StatCard label="Overridden"    value={overridden} color="red" />
-        <StatCard label="Flagged"       value={submissions.filter(s=>s.plagiarism).length} color="amber" />
+        <StatCard label="Flagged"       value={submissions.filter(s=>s.flagged_for_review).length} color="amber" />
       </div>
 
       <div className={styles.layout}>
         {/* LEFT: list */}
         <div className={styles.list}>
-          {submissions.map((s, i) => (
+          {submissions.map((s, i) => {
+            const pct = Math.round((s.score / s.max_score) * 100);
+            return (
             <div
               key={s.id}
               className={`${styles.listItem} ${i === selectedIdx ? styles.listItemActive : ''}`}
               onClick={() => setSelectedIdx(i)}
             >
               <div className={styles.listName}>
-                {s.name}
-                {s.plagiarism && <i className="ti ti-alert-triangle" style={{ color: 'var(--amber)', fontSize: 12, marginLeft: 5 }} />}
+                {s.student_name || 'Anonymous'}
+                {s.flagged_for_review && <i className="ti ti-alert-triangle" style={{ color: 'var(--amber)', fontSize: 12, marginLeft: 5 }} />}
               </div>
               <div className={styles.listMeta}>
-                <span>{s.roll}</span>
-                <span style={{ color: s.status === 'approved' ? 'var(--accent)' : s.status === 'overridden' ? 'var(--red)' : 'var(--amber)' }}>
-                  {s.status}
+                <span>{s.student_roll || s.student_id.substring(0,8)}</span>
+                <span style={{ color: s.review_status === 'approved' ? 'var(--accent)' : s.review_status === 'overridden' ? 'var(--red)' : 'var(--amber)' }}>
+                  {s.review_status}
                 </span>
               </div>
-              <div className={styles.listScore} style={{ color: scoreColor(s.pct) }}>
-                {s.score}/{s.max}
+              <div className={styles.listScore} style={{ color: scoreColor(pct) }}>
+                {s.score}/{s.max_score}
               </div>
             </div>
-          ))}
+          )})}
         </div>
 
         {/* RIGHT: detail panel */}
         <div className={styles.panel}>
-          {!selected ? <EmptyState message="Select a submission to review" /> : (
+          {!selected ? <EmptyState message="Select a submission to review" /> : (() => {
+            const pct = Math.round((selected.score / selected.max_score) * 100);
+            return (
             <>
-              {selected.plagiarism && (
+              {selected.flagged_for_review && (
                 <div className={styles.plagBanner}>
                   <i className="ti ti-alert-triangle" />
-                  <span><strong>Plagiarism Flag:</strong> High structural similarity detected. Manual review required before approval.</span>
+                  <span><strong>Review Flag:</strong> This submission was flagged by the ML pipeline for manual review.</span>
                 </div>
               )}
 
               <div className={styles.panelHeader}>
                 <div>
-                  <div className={styles.studentName}>{selected.name}</div>
+                  <div className={styles.studentName}>{selected.student_name || 'Anonymous'}</div>
                   <div className={styles.studentMeta}>
-                    {selected.roll} &nbsp;·&nbsp; {selected.score}/{selected.max} &nbsp;·&nbsp;
-                    <span style={{ color: scoreColor(selected.pct) }}>{selected.pct}%</span>
+                    {selected.student_roll || selected.student_id.substring(0,8)} &nbsp;·&nbsp; {selected.score}/{selected.max_score} &nbsp;·&nbsp;
+                    <span style={{ color: scoreColor(pct) }}>{pct}%</span>
                   </div>
                 </div>
                 <div className={styles.panelActions}>
-                  {selected.status === 'pending' ? (
+                  {selected.review_status === 'pending' ? (
                     <>
                       <Btn variant="approve" icon="check" onClick={doApprove}>
                         Approve <Kbd>A</Kbd>
@@ -127,9 +131,9 @@ export default function Review({ initialId }) {
                       </Btn>
                     </>
                   ) : (
-                    <Pill variant={selected.status === 'approved' ? 'green' : 'red'}>
-                      {selected.status.charAt(0).toUpperCase() + selected.status.slice(1)}
-                      {selected.overrideReason && ` — ${selected.overrideReason}`}
+                    <Pill variant={selected.review_status === 'approved' ? 'green' : 'red'}>
+                      {selected.review_status.charAt(0).toUpperCase() + selected.review_status.slice(1)}
+                      {selected.override_reason && ` — ${selected.override_reason}`}
                     </Pill>
                   )}
                 </div>
@@ -140,10 +144,10 @@ export default function Review({ initialId }) {
                   <div className={styles.overrideTitle}>Override Score</div>
                   <div className={styles.overrideRow}>
                     <div>
-                      <div className={styles.miniLabel}>New Score (max {selected.max})</div>
+                      <div className={styles.miniLabel}>New Score (max {selected.max_score})</div>
                       <input
                         className={styles.overrideInput}
-                        type="number" min="0" max={selected.max}
+                        type="number" min="0" max={selected.max_score}
                         value={overrideScore}
                         onChange={e => setOverrideScore(e.target.value)}
                       />
@@ -167,40 +171,43 @@ export default function Review({ initialId }) {
                 <div className={styles.miniLabel} style={{ marginBottom: 10 }}>Student Answer Script</div>
                 <div className={styles.scriptPlaceholder}>
                   <i className="ti ti-file-text" style={{ fontSize: 32, color: 'var(--border2)' }} />
-                  <span>Scanned answer sheet — {selected.roll}_script.pdf</span>
-                  <span style={{ fontSize: 11, opacity: 0.45 }}>Page 1 of 3 · Click to zoom</span>
+                  <span>Scanned answer sheet</span>
                 </div>
               </div>
 
               {/* Breakdown */}
+              {selected.per_question_breakdown && (
               <div>
                 <div className={styles.sectionLabel}>Per-Question Breakdown</div>
                 <div className={styles.breakdown}>
-                  {selected.breakdown.map((b, i) => {
-                    const pct = Math.round(b.score / b.max * 100);
-                    const fill = pct === 0 ? 'var(--red)' : pct < 70 ? 'var(--amber)' : 'var(--accent)';
+                  {selected.per_question_breakdown.map((b, i) => {
+                    const bpct = Math.round(b.score / b.max_score * 100);
+                    const fill = bpct === 0 ? 'var(--red)' : bpct < 70 ? 'var(--amber)' : 'var(--accent)';
                     return (
                       <div key={i} className={styles.bRow}>
-                        <div className={styles.bQ}>{b.q}</div>
-                        <div className={styles.bTopic}>{b.topic}</div>
+                        <div className={styles.bQ}>{b.question_id || `Q${i+1}`}</div>
+                        <div className={styles.bTopic}>{b.topic || ''}</div>
                         <div className={styles.bBarWrap}>
-                          <div className={styles.bBar} style={{ width: `${Math.min(pct, 100)}%`, background: fill }} />
+                          <div className={styles.bBar} style={{ width: `${Math.min(bpct, 100)}%`, background: fill }} />
                         </div>
-                        <div className={styles.bFeedback}>{b.feedback}</div>
-                        <div className={styles.bScore} style={{ color: fill }}>{b.score}/{b.max}</div>
+                        <div className={styles.bFeedback}>{b.feedback || ''}</div>
+                        <div className={styles.bScore} style={{ color: fill }}>{b.score}/{b.max_score}</div>
                       </div>
                     );
                   })}
                 </div>
               </div>
+              )}
 
               {/* AI Justification */}
+              {selected.overall_justification && (
               <div className={styles.justification}>
                 <span className={styles.aiTag}>AI Justification</span>
-                {selected.justification}
+                {selected.overall_justification}
               </div>
+              )}
             </>
-          )}
+          )})}
         </div>
       </div>
 

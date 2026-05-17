@@ -7,10 +7,17 @@ export default function Login() {
   const [role, setRole] = useState('instructor');
   const [email, setEmail] = useState('instructor@gradeops.io');
   const [password, setPassword] = useState('demo1234');
+  const [loading, setLoading] = useState(false);
 
   function pickRole(r) {
     setRole(r);
     setEmail(r === 'instructor' ? 'instructor@gradeops.io' : 'ta@gradeops.io');
+  }
+
+  async function handleLogin() {
+    setLoading(true);
+    await login(email, password);
+    setLoading(false);
   }
 
   return (
@@ -66,9 +73,9 @@ export default function Login() {
           </div>
         </div>
 
-        <button className={styles.submitBtn} onClick={() => login(role)}>
+        <button className={styles.submitBtn} onClick={handleLogin} disabled={loading}>
           <i className="ti ti-arrow-right" />
-          Sign In
+          {loading ? 'Signing In...' : 'Sign In'}
         </button>
         <p className={styles.hint}>Demo — any password works</p>
       </div>

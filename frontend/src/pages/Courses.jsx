@@ -1,55 +1,70 @@
-import { COURSES } from '../data/mockData';
+import { useState, useEffect } from 'react';
 import { useApp } from '../hooks/useApp';
+import api from '../api/client';
 import { SectionHeader, StatCard, Pill, Btn } from '../components/UI';
 import styles from './Courses.module.css';
 
 export default function Courses({ onNav, onSelectCourse }) {
-  const { user, submissions } = useApp();
-  const pending = submissions.filter(s => s.status === 'pending').length;
+  const { user } = useApp();
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/exams')
+      .then(res => {
+        setExams(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch exams:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  const pending = exams.filter(e => e.status === 'pending').length;
 
   return (
     <div className={styles.page}>
-      <SectionHeader title="Courses" sub="Spring 2026">
-        {user.role === 'instructor'
+      <SectionHeader title="Exams" sub="Spring 2026">
+        {user?.role === 'instructor'
           ? <Btn variant="primary" icon="plus" onClick={() => onNav('upload')}>New Exam</Btn>
           : <Btn variant="primary" icon="checkup-list" onClick={() => onNav('review')}>Open Review Queue</Btn>
         }
       </SectionHeader>
 
       <div className={styles.statsRow}>
-        <StatCard label="Total Exams" value="12" color="blue" />
-        <StatCard label="Graded" value="9" color="green" />
-        <StatCard label="Pending Review" value={pending} color="amber" />
-        <StatCard label="Avg Score" value="74%" />
+        <StatCard label="Total Exams" value={exams.length} color="blue" />
+        <StatCard label="Processing" value={exams.filter(e => e.status === 'processing').length} color="amber" />
+        <StatCard label="Published" value={exams.filter(e => e.status === 'published').length} color="green" />
+        <StatCard label="Avg Score" value="--" />
       </div>
 
       <div className={styles.grid}>
-        {COURSES.map(c => (
-          <CourseCard key={c.id} course={c} role={user.role} onClick={() => onSelectCourse(c)} />
+        {loading ? <p>Loading exams...</p> : exams.map(e => (
+          <CourseCard key={e.id} exam={e} role={user?.role} onClick={() => onSelectCourse(e)} />
         ))}
       </div>
     </div>
   );
 }
 
-function CourseCard({ course, role, onClick }) {
+function CourseCard({ exam, role, onClick }) {
   return (
     <div className={styles.card} onClick={onClick}>
       <div className={styles.cardAccent} />
-      <div className={styles.code}>{course.code}</div>
-      <div className={styles.name}>{course.name}</div>
+      <div className={styles.code}>{exam.subject}</div>
+      <div className={styles.name}>{exam.title}</div>
       <div className={styles.meta}>
-        <span><i className="ti ti-users" /> {course.students} students</span>
-        <span><i className="ti ti-file-text" /> {course.exams} exams</span>
-        <span><i className="ti ti-check" /> {course.graded} graded</span>
+        <span><i className="ti ti-file-text" /> {exam.total_marks} Marks</span>
+        <span><i className="ti ti-check" /> Status: {exam.status}</span>
       </div>
-      {course.pending > 0 && (
+      {exam.status === 'pending' && (
         <div className={styles.pendingRow}>
-          <Pill variant="amber"><i className="ti ti-clock" />{course.pending} pending review</Pill>
+          <Pill variant="amber"><i className="ti ti-clock" />Pending Processing</Pill>
         </div>
       )}
       <div className={styles.cardFooter}>
-        <span>{role === 'instructor' ? 'Upload exam →' : 'View results →'}</span>
+        <span>{role === 'instructor' ? 'Manage exam →' : 'View results →'}</span>
       </div>
     </div>
   );
