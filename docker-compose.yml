@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for structured data (Users, Exams)
+  postgres:
+    image: postgres:15-alpine
+    container_name: gradeops_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gradeops
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # MongoDB for flexible data (LLM Grades, complex rubrics)
+  mongodb:
+    image: mongo:6.0
+    container_name: gradeops_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongodb_data:
