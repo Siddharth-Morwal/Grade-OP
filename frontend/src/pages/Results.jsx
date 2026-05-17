@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../hooks/useApp';
 import api from '../api/client';
-import { SectionHeader, StatCard, Pill, Btn } from '../components/UI';
+import { SectionHeader, StatCard, Pill, Btn, FormField, Input } from '../components/UI';
 import styles from './Results.module.css';
 
 function scoreColor(pct) {
@@ -17,11 +17,15 @@ function scoreFill(pct) {
 }
 
 export default function Results({ course, onNav, onOpenReview }) {
-  const { submissions, setSubmissions, showToast } = useApp();
+  const { submissions, setSubmissions, showToast, user } = useApp();
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Fetch reviews for the selected exam (course)
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualRoll, setManualRoll] = useState('');
+  const [manualScore, setManualScore] = useState('');
+  
+  function fetchSubmissions() {
+    setLoading(true);
     const url = course ? `/reviews?exam_id=${course.id}` : '/reviews';
     api.get(url)
       .then(res => {
@@ -32,7 +36,42 @@ export default function Results({ course, onNav, onOpenReview }) {
         console.error('Failed to fetch reviews:', err);
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    fetchSubmissions();
   }, [course, setSubmissions]);
+
+  async function handleAddManual() {
+    if (!manualName || !manualRoll || !manualScore) {
+      showToast('Please fill all fields', 'info');
+      return;
+    }
+    if (!course) {
+      showToast('Please select a course to add manual grades', 'info');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await api.post('/grades/manual', {
+        student_name: manualName,
+        roll_number: manualRoll,
+        score: parseInt(manualScore, 10),
+        exam_id: course.id
+      });
+      showToast('Manual result added successfully', 'success');
+      setShowManualModal(false);
+      setManualName('');
+      setManualRoll('');
+      setManualScore('');
+      fetchSubmissions();
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to add manual result', 'error');
+      setLoading(false);
+    }
+  }
 
   const avg = submissions.length > 0 ? Math.round(submissions.reduce((a, s) => a + (s.score / s.max_score * 100), 0) / submissions.length) : 0;
   const passing = submissions.filter(s => (s.score / s.max_score) >= 0.5).length;
@@ -46,10 +85,41 @@ export default function Results({ course, onNav, onOpenReview }) {
           <i className="ti ti-arrow-left" /> Back to Exams
         </button>
       )}
-      <SectionHeader title={course ? course.title : "All Reviews"} sub={`${course ? course.subject : ''} · ${submissions.length} submissions`}>
+      <SectionHeader title={course ? course.title : "All Reviews"} sub={`${course ? course.course_code || course.subject : ''} · ${submissions.length} submissions`}>
+        {course && user?.role === 'teacher' && (
+          <Btn variant="primary" icon="plus" onClick={() => setShowManualModal(true)}>Add Manual Result</Btn>
+        )}
         <Btn variant="outline" icon="download" onClick={() => showToast('CSV export ready', 'success')}>Export CSV</Btn>
         <Btn variant="outline" icon="printer" onClick={() => showToast('Print view prepared', 'info')}>Print</Btn>
       </SectionHeader>
+
+      {showManualModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text)' }}>Add Manual Result</h3>
+              <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => setShowManualModal(false)}>
+                <i className="ti ti-x" style={{ fontSize: '1.2rem' }} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <FormField label="Student Name">
+                <Input value={manualName} onChange={e => setManualName(e.target.value)} placeholder="e.g. John Doe" />
+              </FormField>
+              <FormField label="Roll Number">
+                <Input value={manualRoll} onChange={e => setManualRoll(e.target.value)} placeholder="e.g. CS21B043" />
+              </FormField>
+              <FormField label={`Score (Max: ${course?.total_marks})`}>
+                <Input type="number" value={manualScore} onChange={e => setManualScore(e.target.value)} placeholder="e.g. 85" />
+              </FormField>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <Btn variant="primary" icon="check" onClick={handleAddManual}>Submit Result</Btn>
+                <Btn variant="outline" onClick={() => setShowManualModal(false)}>Cancel</Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.statsRow}>
         <StatCard label="Submissions" value={submissions.length} color="blue" />

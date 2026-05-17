@@ -13,8 +13,11 @@ from sqlalchemy import select
 from app.database.postgres import get_db
 from app.auth.dependencies import get_current_user, require_roles
 from app.schemas.exams import ExamOut
+import random
+from app.models.grade import Grade, ReviewStatus
+from app.models.user import User, UserRole
 
-router = APIRouter(prefix="/exams", tags=["exams"])
+router = APIRouter(tags=["exams"])
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/tmp/exam_uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -25,10 +28,13 @@ MAX_FILE_SIZE_MB = 20
 @router.post("/", response_model=ExamOut, status_code=status.HTTP_201_CREATED)
 async def upload_exam(
     title: str = Form(...),
-    subject: str = Form(...),
+    course_code: str = Form(...),
+    subject: str = Form(""),
     description: Optional[str] = Form(None),
     total_marks: int = Form(...),
     file: UploadFile = File(...),
+    answer_key: Optional[UploadFile] = File(None),
+    student_scripts: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_roles("teacher", "admin")),
 ):
@@ -50,27 +56,68 @@ async def upload_exam(
             detail=f"File too large ({size_mb:.1f} MB). Max is {MAX_FILE_SIZE_MB} MB.",
         )
 
-    file_ext = file.filename.rsplit(".", 1)[-1].lower()
-    unique_filename = f"{uuid.uuid4()}.{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    async def save_upload(u_file: UploadFile) -> str:
+        contents = await u_file.read()
+        f_ext = u_file.filename.rsplit(".", 1)[-1].lower()
+        u_name = f"{uuid.uuid4()}.{f_ext}"
+        path = os.path.join(UPLOAD_DIR, u_name)
+        async with aiofiles.open(path, "wb") as f_out:
+            await f_out.write(contents)
+        return path
 
-    async with aiofiles.open(file_path, "wb") as f:
-        await f.write(contents)
+    file_path = await save_upload(file)
+    answer_key_path = await save_upload(answer_key) if answer_key else None
+    student_scripts_path = await save_upload(student_scripts) if student_scripts else None
 
     exam = Exam(
         title=title,
-        subject=subject,
+        course_code=course_code,
+        subject=subject or course_code,
         description=description,
         total_marks=total_marks,
         file_path=file_path,
         file_name=file.filename,
+        answer_key_path=answer_key_path,
+        student_script_path=student_scripts_path,
         created_by=current_user.id,
-        status="pending",
+        status="processing" if student_scripts else "pending",
     )
 
     db.add(exam)
     await db.commit()
     await db.refresh(exam)
+
+    # Mock ML pipeline evaluation if student scripts are provided
+    if student_scripts:
+        # Generate some dummy students and grades
+        for i in range(1, 6):
+            dummy_email = f"student{i}_{exam.id}@mock.com"
+            dummy_student = User(
+                email=dummy_email,
+                full_name=f"Mock Student {i}",
+                roll_number=f"MOCK-26-{100+i}",
+                hashed_password="mock",
+                role=UserRole.student,
+            )
+            db.add(dummy_student)
+            await db.commit()
+            await db.refresh(dummy_student)
+            
+            score = random.randint(int(total_marks * 0.4), total_marks)
+            grade = Grade(
+                student_id=dummy_student.id,
+                exam_id=exam.id,
+                score=score,
+                max_score=total_marks,
+                confidence_score=random.uniform(0.7, 0.99),
+                flagged_for_review=(score < total_marks * 0.6),
+                review_status=ReviewStatus.pending,
+            )
+            db.add(grade)
+        
+        exam.status = "published"
+        db.add(exam)
+        await db.commit()
 
     return exam
 

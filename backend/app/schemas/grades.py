@@ -24,6 +24,12 @@ class GradeCreate(BaseModel):
     overall_justification: Optional[str] = None
     per_question_breakdown: Optional[List[QuestionScore]] = None
 
+class ManualGradeCreate(BaseModel):
+    student_name: str
+    roll_number: str
+    score: int
+    exam_id: str
+
 class GradeOut(BaseModel):
     id: uuid.UUID
     student_id: uuid.UUID

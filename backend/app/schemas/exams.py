@@ -10,6 +10,7 @@ class ExamOut(BaseModel):
     id: uuid.UUID
     title: str
     subject: str
+    course_code: str
     description: Optional[str] = None
     total_marks: int
     file_name: str

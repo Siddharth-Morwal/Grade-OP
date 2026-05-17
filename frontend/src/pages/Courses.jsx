@@ -52,7 +52,7 @@ function CourseCard({ exam, role, onClick }) {
   return (
     <div className={styles.card} onClick={onClick}>
       <div className={styles.cardAccent} />
-      <div className={styles.code}>{exam.subject}</div>
+      <div className={styles.code}>{exam.course_code || exam.subject}</div>
       <div className={styles.name}>{exam.title}</div>
       <div className={styles.meta}>
         <span><i className="ti ti-file-text" /> {exam.total_marks} Marks</span>

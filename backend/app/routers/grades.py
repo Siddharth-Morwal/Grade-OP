@@ -8,7 +8,8 @@ from sqlalchemy.orm import selectinload
 
 from app.database.postgres import get_db
 from app.auth.dependencies import get_current_user, require_roles
-from app.schemas.grades import GradeCreate, GradeOut
+from app.auth.dependencies import get_current_user, require_roles
+from app.schemas.grades import GradeCreate, GradeOut, ManualGradeCreate
 
 router = APIRouter(tags=["grades"])
 
@@ -56,6 +57,74 @@ async def submit_grade(
         return existing_grade
     else:
         grade = Grade(**payload.model_dump())
+        db.add(grade)
+        await db.commit()
+        await db.refresh(grade)
+        return grade
+
+@router.post("/manual", response_model=GradeOut, status_code=status.HTTP_201_CREATED)
+async def submit_manual_grade(
+    payload: ManualGradeCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_roles("teacher", "admin")),
+):
+    """Manually add a student grade (from UI)."""
+    from app.models.grade import Grade, ReviewStatus
+    from app.models.user import User, UserRole
+    from app.models.exam import Exam
+
+    # Verify exam exists and belongs to teacher
+    result = await db.execute(select(Exam).where(Exam.id == uuid.UUID(payload.exam_id)))
+    exam = result.scalar_one_or_none()
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+
+    # Find or create student user
+    result = await db.execute(select(User).where(User.roll_number == payload.roll_number))
+    student = result.scalar_one_or_none()
+    if not student:
+        # Create a dummy user for the student
+        student = User(
+            email=f"{payload.roll_number.lower()}@mock.com",
+            full_name=payload.student_name,
+            roll_number=payload.roll_number,
+            hashed_password="mock",
+            role=UserRole.student,
+        )
+        db.add(student)
+        await db.commit()
+        await db.refresh(student)
+
+    # Upsert grade
+    result = await db.execute(
+        select(Grade).where(
+            and_(
+                Grade.student_id == student.id,
+                Grade.exam_id == exam.id,
+            )
+        )
+    )
+    existing_grade = result.scalar_one_or_none()
+
+    if existing_grade:
+        existing_grade.score = payload.score
+        existing_grade.review_status = ReviewStatus.overridden
+        existing_grade.reviewed_by = current_user.id
+        db.add(existing_grade)
+        await db.commit()
+        await db.refresh(existing_grade)
+        return existing_grade
+    else:
+        grade = Grade(
+            student_id=student.id,
+            exam_id=exam.id,
+            score=payload.score,
+            max_score=exam.total_marks,
+            confidence_score=1.0,
+            flagged_for_review=False,
+            review_status=ReviewStatus.approved,
+            reviewed_by=current_user.id,
+        )
         db.add(grade)
         await db.commit()
         await db.refresh(grade)

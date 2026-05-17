@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../hooks/useApp';
 import { SectionHeader, Btn, FormField, Input, Textarea, LoadingBar } from '../components/UI';
+import api from '../api/client';
 import styles from './Upload.module.css';
 
 const RUBRIC_PLACEHOLDER = `[
@@ -22,6 +23,7 @@ export default function Upload({ course, onNav }) {
   const { showToast } = useApp();
   const [files, setFiles] = useState({});
   const [examTitle, setExamTitle] = useState('');
+  const [courseCode, setCourseCode] = useState(course ? course.course_code : '');
   const [totalMarks, setTotalMarks] = useState('');
   const [rubric, setRubric] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,16 +31,43 @@ export default function Upload({ course, onNav }) {
   function handleFileDrop(zone, e) {
     e.preventDefault();
     const file = e.dataTransfer?.files?.[0] || e.target?.files?.[0];
-    if (file) setFiles(prev => ({ ...prev, [zone]: file.name }));
+    if (file) setFiles(prev => ({ ...prev, [zone]: file }));
   }
 
   async function handleSubmit() {
     if (!examTitle) { showToast('Enter an exam title', 'info'); return; }
+    if (!courseCode) { showToast('Enter a course code', 'info'); return; }
+    if (!totalMarks) { showToast('Enter total marks', 'info'); return; }
+    if (!files.paper) { showToast('Upload the Question Paper', 'info'); return; }
+
     setLoading(true);
-    await new Promise(r => setTimeout(r, 2200));
-    setLoading(false);
-    showToast('Pipeline triggered — grading in progress!', 'success');
-    onNav('results');
+    try {
+      const formData = new FormData();
+      formData.append('title', examTitle);
+      formData.append('course_code', courseCode);
+      formData.append('total_marks', totalMarks);
+      formData.append('file', files.paper);
+      
+      if (files.key) {
+        formData.append('answer_key', files.key);
+      }
+      if (files.scripts) {
+        formData.append('student_scripts', files.scripts);
+      }
+      
+      // Import api from client at the top if needed, we'll assume it's imported
+      await api.post('/exams', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      setLoading(false);
+      showToast(files.scripts ? 'Pipeline triggered — grading in progress!' : 'Exam saved successfully!', 'success');
+      onNav('results');
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+      showToast('Failed to upload exam', 'error');
+    }
   }
 
   const zones = [
@@ -56,14 +85,14 @@ export default function Upload({ course, onNav }) {
       {loading && <LoadingBar />}
 
       <div className={styles.formRow}>
+        <FormField label="Course Code">
+          <Input value={courseCode} onChange={e => setCourseCode(e.target.value)} placeholder="e.g. CS101" />
+        </FormField>
         <FormField label="Exam Title">
           <Input value={examTitle} onChange={e => setExamTitle(e.target.value)} placeholder="e.g. Mid-Semester Examination" />
         </FormField>
         <FormField label="Total Marks">
           <Input type="number" value={totalMarks} onChange={e => setTotalMarks(e.target.value)} placeholder="50" />
-        </FormField>
-        <FormField label="Course">
-          <Input value={course ? `${course.code} — ${course.name}` : ''} readOnly style={{ opacity: 0.6 }} />
         </FormField>
       </div>
 
@@ -74,8 +103,8 @@ export default function Upload({ course, onNav }) {
             icon={z.icon}
             label={z.label}
             hint={z.hint}
-            filename={files[z.id]}
-            onFile={name => setFiles(prev => ({ ...prev, [z.id]: name }))}
+            filename={files[z.id]?.name}
+            onFile={f => setFiles(prev => ({ ...prev, [z.id]: f }))}
           />
         ))}
         <div className={styles.rubricBox}>
@@ -111,7 +140,7 @@ export default function Upload({ course, onNav }) {
 function UploadZone({ icon, label, hint, filename, onFile }) {
   function handleChange(e) {
     const f = e.target.files?.[0];
-    if (f) onFile(f.name);
+    if (f) onFile(f);
   }
 
   return (

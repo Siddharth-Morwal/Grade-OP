@@ -74,6 +74,14 @@ class Exam(UUIDMixin, TimestampMixin, Base):
         comment="Subject area, e.g. 'Mathematics', 'Physics'",
     )
 
+    course_code: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="UNKNOWN",
+        index=True,
+        comment="Course code identifier, e.g. 'CS101'",
+    )
+
     description: Mapped[str | None] = mapped_column(
         Text,                                # TEXT = unlimited length (vs VARCHAR)
         nullable=True,
