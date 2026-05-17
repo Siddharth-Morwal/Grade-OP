@@ -19,6 +19,7 @@ import time
 
 # ── Database layer ────────────────────────────────────────────────────────────
 from app.database.postgres import engine, Base
+import app.models  # Register all models with Base.metadata
 from app.database.mongo import connect_mongo, close_mongo
 
 # ── Routers (uncomment each one as you build it) ──────────────────────────────
