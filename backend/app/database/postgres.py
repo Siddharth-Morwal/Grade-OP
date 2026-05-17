@@ -169,18 +169,7 @@ AsyncSessionLocal = async_sessionmaker(
 #     modifies existing tables, so it is safe to call on every startup.
 #     (For schema *changes* use Alembic migrations instead.)
 # ─────────────────────────────────────────────────────────────────────────────
-class Base(DeclarativeBase):
-    """
-    Parent class for all ORM models in this project.
-
-    Usage in models/exam.py:
-        from app.database.postgres import Base
-
-        class Exam(Base):
-            __tablename__ = "exams"
-            ...
-    """
-    pass
+from app.models.base import Base
 
 
 # ─────────────────────────────────────────────────────────────────────────────

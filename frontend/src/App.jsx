@@ -23,7 +23,7 @@ function AppInner() {
 
   function handleSelectCourse(course) {
     setSelectedCourse(course);
-    if (user.role === 'instructor') {
+    if (user.role === 'teacher') {
       setScreen('upload');
     } else {
       setScreen('results');

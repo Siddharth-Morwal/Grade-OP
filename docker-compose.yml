@@ -1,10 +1,11 @@
-version: '3.8'
+version: '3.9'
 
 services:
-  # PostgreSQL Database for structured data (Users, Exams)
+
   postgres:
-    image: postgres:15-alpine
-    container_name: gradeops_postgres
+    image: postgres:15
+    container_name: gradeops-postgres
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -13,18 +14,48 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
 
-  # MongoDB for flexible data (LLM Grades, complex rubrics)
   mongodb:
-    image: mongo:6.0
-    container_name: gradeops_mongo
+    image: mongo:7
+    container_name: gradeops-mongo
+    restart: always
     ports:
       - "27017:27017"
+
+  redis:
+    image: redis:7
+    container_name: gradeops-redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    container_name: gradeops-backend
+    restart: always
+    ports:
+      - "8000:8000"
     volumes:
-      - mongodb_data:/data/db
-    restart: unless-stopped
+      - ./backend:/app
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/gradeops
+      MONGO_URI: mongodb://mongodb:27017
+      REDIS_URL: redis://redis:6379
+
+  frontend:
+    build: ./frontend
+    container_name: gradeops-frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
-  mongodb_data:
